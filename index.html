@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+
+<html lang="ja">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Hiragana Match Game</title>
+
+<style>
+
+body {
+
+  font-family: "Hiragino Kaku Gothic Pro","Meiryo",sans-serif;
+
+  background:#fff;
+
+  text-align:center;
+
+  padding:30px;
+
+  color:#333;
+
+}
+
+h1 {
+
+  color:#b23b3b;
+
+  margin-bottom:10px;
+
+}
+
+#game {
+
+  display:flex;
+
+  justify-content:center;
+
+  gap:40px;
+
+  margin-top:30px;
+
+}
+
+.column {
+
+  display:grid;
+
+  grid-template-columns:1fr;
+
+  gap:12px;
+
+}
+
+.card {
+
+  padding:14px 20px;
+
+  border-radius:12px;
+
+  font-size:22px;
+
+  cursor:pointer;
+
+  border:3px solid #b23b3b;
+
+  transition:.2s;
+
+}
+
+.romaji {
+
+  background:#fff;
+
+  color:#b23b3b;
+
+}
+
+.kana {
+
+  background:#b23b3b;
+
+  color:#fff;
+
+}
+
+.selected {
+
+  background:#ffd6e8 !important;
+
+}
+
+.matched {
+
+  background:#ccc !important;
+
+  color:#666 !important;
+
+  cursor:default;
+
+}
+
+#status {
+
+  font-size:20px;
+
+  margin-top:20px;
+
+}
+
+#gif {
+
+  margin-top:20px;
+
+  max-width:260px;
+
+  border-radius:12px;
+
+}
+
+</style>
+
+</head>
+
+<body>
+
+<h1>🧩 Hiragana Matching Game</h1>
+
+<p>Match the romaji with the correct hiragana</p>
+
+<div id="game">
+
+  <div class="column" id="romajiCol"></div>
+
+  <div class="column" id="kanaCol"></div>
+
+</div>
+
+<div id="status"></div>
+
+<img id="gif" src="" alt="">
+
+<script>
+
+/* ===============================
+
+   FULL HIRAGANA (each once)
+
+================================ */
+
+const kanaList = [
+
+  ["あ","a"],["い","i"],["う","u"],["え","e"],["お","o"],
+
+  ["か","ka"],["き","ki"],["く","ku"],["け","ke"],["こ","ko"],
+
+  ["さ","sa"],["し","shi"],["す","su"],["せ","se"],["そ","so"],
+
+  ["た","ta"],["ち","chi"],["つ","tsu"],["て","te"],["と","to"],
+
+  ["な","na"],["に","ni"],["ぬ","nu"],["ね","ne"],["の","no"],
+
+  ["は","ha"],["ひ","hi"],["ふ","fu"],["へ","he"],["ほ","ho"],
+
+  ["ま","ma"],["み","mi"],["む","mu"],["め","me"],["も","mo"],
+
+  ["や","ya"],["ゆ","yu"],["よ","yo"],
+
+  ["ら","ra"],["り","ri"],["る","ru"],["れ","re"],["ろ","ro"],
+
+  ["わ","wa"],["を","wo"],["ん","n"],
+
+  ["が","ga"],["ぎ","gi"],["ぐ","gu"],["げ","ge"],["ご","go"],
+
+  ["ざ","za"],["じ","ji"],["ず","zu"],["ぜ","ze"],["ぞ","zo"],
+
+  ["だ","da"],["ぢ","ji"],["づ","zu"],["で","de"],["ど","do"],
+
+  ["ば","ba"],["び","bi"],["ぶ","bu"],["べ","be"],["ぼ","bo"],
+
+  ["ぱ","pa"],["ぴ","pi"],["ぷ","pu"],["ぺ","pe"],["ぽ","po"],
+
+  ["きゃ","kya"],["きゅ","kyu"],["きょ","kyo"],
+
+  ["しゃ","sha"],["しゅ","shu"],["しょ","sho"],
+
+  ["ちゃ","cha"],["ちゅ","chu"],["ちょ","cho"],
+
+  ["にゃ","nya"],["にゅ","nyu"],["にょ","nyo"],
+
+  ["ひゃ","hya"],["ひゅ","hyu"],["ひょ","hyo"],
+
+  ["みゃ","mya"],["みゅ","myu"],["みょ","myo"],
+
+  ["りゃ","rya"],["りゅ","ryu"],["りょ","ryo"],
+
+  ["ぎゃ","gya"],["ぎゅ","gyu"],["ぎょ","gyo"],
+
+  ["じゃ","ja"],["じゅ","ju"],["じょ","jo"],
+
+  ["びゃ","bya"],["びゅ","byu"],["びょ","byo"],
+
+  ["ぴゃ","pya"],["ぴゅ","pyu"],["ぴょ","pyo"]
+
+];
+
+/* ===============================
+
+   GAME STATE
+
+================================ */
+
+let pool = [...kanaList].sort(() => Math.random() - 0.5);
+
+let currentPairs = [];
+
+let selectedRomaji = null;
+
+let selectedKana = null;
+
+let round = 0;
+
+/* ===============================
+
+   ROUND SETUP
+
+================================ */
+
+function nextRound() {
+
+  if (pool.length === 0) return endGame();
+
+  round++;
+
+  currentPairs = pool.splice(0, 4);
+
+  selectedRomaji = selectedKana = null;
+
+  document.getElementById("status").textContent =
+
+    `Round ${round}`;
+
+  render();
+
+}
+
+function render() {
+
+  const romajiCol = document.getElementById("romajiCol");
+
+  const kanaCol = document.getElementById("kanaCol");
+
+  romajiCol.innerHTML = kanaCol.innerHTML = "";
+
+  const romajiCards = [...currentPairs].sort(() => Math.random() - 0.5);
+
+  const kanaCards = [...currentPairs].sort(() => Math.random() - 0.5);
+
+  romajiCards.forEach(([kana, romaji]) => {
+
+    const div = document.createElement("div");
+
+    div.className = "card romaji";
+
+    div.textContent = romaji;
+
+    div.onclick = () => selectRomaji(div, kana);
+
+    romajiCol.appendChild(div);
+
+  });
+
+  kanaCards.forEach(([kana]) => {
+
+    const div = document.createElement("div");
+
+    div.className = "card kana";
+
+    div.textContent = kana;
+
+    div.onclick = () => selectKana(div, kana);
+
+    kanaCol.appendChild(div);
+
+  });
+
+}
+
+function selectRomaji(el, kana) {
+
+  if (el.classList.contains("matched")) return;
+
+  clearSelection("romaji");
+
+  el.classList.add("selected");
+
+  selectedRomaji = { el, kana };
+
+  checkMatch();
+
+}
+
+function selectKana(el, kana) {
+
+  if (el.classList.contains("matched")) return;
+
+  clearSelection("kana");
+
+  el.classList.add("selected");
+
+  selectedKana = { el, kana };
+
+  checkMatch();
+
+}
+
+function clearSelection(type) {
+
+  document.querySelectorAll("." + type).forEach(c =>
+
+    c.classList.remove("selected")
+
+  );
+
+}
+
+/* ===============================
+
+   MATCH CHECK
+
+================================ */
+
+function checkMatch() {
+
+  if (!selectedRomaji || !selectedKana) return;
+
+  if (selectedRomaji.kana === selectedKana.kana) {
+
+    selectedRomaji.el.classList.add("matched");
+
+    selectedKana.el.classList.add("matched");
+
+    selectedRomaji = selectedKana = null;
+
+    if (document.querySelectorAll(".matched").length === 8) {
+
+      setTimeout(nextRound, 700);
+
+    }
+
+  }
+
+}
+
+/* ===============================
+
+   END SCREEN
+
+================================ */
+
+function endGame() {
+
+  document.getElementById("game").style.display = "none";
+
+  const status = document.getElementById("status");
+
+  const gif = document.getElementById("gif");
+
+  status.textContent = "🌟 Amazing work! You matched all hiragana!";
+
+  gif.src =
+
+    "https://raw.githubusercontent.com/k58835032-notbot/lesson-9-morae/main/cool%20cute%20cat.gif";
+
+}
+
+/* ===============================
+
+   START
+
+================================ */
+
+nextRound();
+
+</script>
+
+</body>
+
+</html>
+
